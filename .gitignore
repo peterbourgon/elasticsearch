@@ -1,3 +1,4 @@
+*.sublime-*
 elasticsearch-*.tar.gz
 elasticsearch-*/
 
