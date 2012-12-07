@@ -8,6 +8,34 @@ This is an opinionated library for ElasticSearch in Go. Its opinions are:
 
 # Usage
 
-TODO
+First, it helps to import the package with a short name (package alias).
 
+```go
+import es "github.com/peterbourgon/elasticsearch"
+```
+
+Create a Cluster, which is an actively-managed handle to a set of nodes.
+
+```go
+endpoints := []string{"http://host1:9200", "http://host2:9200"}
+pingInterval, pingTimeout := 30*time.Second, 3*time.Second
+c := es.NewCluster(endpoints, pingInterval, pingTimeout)
+```
+
+Construct queries declaratively, and fire them against the cluster.
+
+```go
+q := es.TermQuery(es.TermQueryParams{
+	Query: &es.Wrapper{
+		Name:    "user",
+		Wrapped: "kimchy",
+	},
+})
+
+response, err := c.Search(q)
+if err != nil {
+	// Fatal
+}
+fmt.Printf("got %d hit(s)", response.HitsWrapper.Total)
+```
 

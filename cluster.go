@@ -92,7 +92,7 @@ func (c *Cluster) Shutdown() {
 //
 //
 
-// A searchBundle wraps a SearchRequest with response and error channels, so
+// searchBundle wraps a SearchRequest with response and error channels, so
 // that it can be processed by the Cluster's event dispatcher.
 type searchBundle struct {
 	request  Request
@@ -109,10 +109,10 @@ func makeSearchBundle(r Request) searchBundle {
 	}
 }
 
-// sendSearchRequest wraps an (internal) searchRequest with a Searcher, which
-// will be a single Node. It blocks and forwards the response (or error) along
-// the appropriate channel in the Request. sendSearchBundle should be fired in a
-// separate goroutine.
+// sendSearchBundle sends the Request in the searchBundle to the given Searcher.
+// It forwards the response, or the error, along the appropriate channel in the
+// searchBundle. It should be called in a new goroutine from the Cluster's event
+// dispatcher.
 func sendSearchBundle(s Searcher, b searchBundle) {
 	response, err := s.Search(b.request)
 	if err != nil {
