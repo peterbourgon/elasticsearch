@@ -115,7 +115,12 @@ func (n *Node) Search(r Request) (SearchResponse, error) {
 	}
 	u.Path = Path(r)
 
-	req, err := http.NewRequest("GET", u.String(), bytes.NewBuffer(r.Query()))
+	queryBuf, err := json.Marshal(r.Query())
+	if err != nil {
+		return SearchResponse{}, err
+	}
+
+	req, err := http.NewRequest("GET", u.String(), bytes.NewBuffer(queryBuf))
 	if err != nil {
 		return SearchResponse{}, err
 	}

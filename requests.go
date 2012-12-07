@@ -8,8 +8,10 @@ import (
 type Request interface {
 	Indices() []string
 	Types() []string
-	Query() []byte
+	Query() SubQuery
 }
+
+var nilRequest Request
 
 func Path(r Request) string {
 	switch indices, types := r.Indices(), r.Types(); true {
@@ -36,17 +38,17 @@ func Path(r Request) string {
 type SearchRequest struct {
 	indices []string
 	types   []string
-	query   []byte // JSON-encoded search query
+	query   SubQuery
 }
 
 func (r *SearchRequest) Indices() []string { return r.indices }
 func (r *SearchRequest) Types() []string   { return r.types }
-func (r *SearchRequest) Query() []byte     { return r.query }
+func (r *SearchRequest) Query() SubQuery   { return r.query }
 
-func NewSearchRequest(index, typ string, query []byte) *SearchRequest {
+func NewSearchRequest(index, typ string, q SubQuery) Request {
 	return &SearchRequest{
 		indices: []string{index},
 		types:   []string{typ},
-		query:   query,
+		query:   q,
 	}
 }
