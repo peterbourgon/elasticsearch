@@ -37,7 +37,8 @@ q := es.TermQuery(es.TermQueryParams{
 	},
 })
 
-response, err := c.Search(q)
+request := NewSearchRequest("twitter", "tweets", q)
+response, err := c.Search(request)
 if err != nil {
 	// Fatal
 }
