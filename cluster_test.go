@@ -13,8 +13,6 @@ import (
 	es "github.com/peterbourgon/elasticsearch"
 	"io/ioutil"
 	"net/http"
-	"os"
-	"os/exec"
 	"testing"
 	"time"
 )
@@ -84,10 +82,7 @@ func testSimpleTermQuery(t *testing.T, c *es.Cluster) {
 type testClusterFunc func(*testing.T, *es.Cluster)
 
 func withCluster(t *testing.T, tests ...testClusterFunc) {
-	eraseData(t)
-	p := startNode(t)
 	loadData(t)
-	defer stopNode(t, p)
 
 	endpoints := []string{"http://127.0.0.1:9200"}
 	pingInterval, pingTimeout := 10*time.Second, 3*time.Second
@@ -96,83 +91,6 @@ func withCluster(t *testing.T, tests ...testClusterFunc) {
 
 	for _, f := range tests {
 		f(t, c)
-	}
-}
-
-func startNode(t *testing.T) *os.Process {
-	ensureNode(t)
-
-	// start the node in the foreground
-	began := time.Now()
-	cmd := exec.Command(SCRIPT, "-f")
-	err := cmd.Start()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// hit port 9200 until it's available
-	backoffDelay := 50 * time.Millisecond
-	timeout := time.After(15 * time.Second)
-	func() {
-		for {
-			backoff := time.After(backoffDelay)
-			select {
-			case <-backoff:
-				if _, err := http.Get("http://localhost:9200"); err == nil {
-					t.Logf("ElasticSearch node available after %s", time.Since(began))
-					return // success
-				}
-				backoffDelay *= 2
-				t.Logf("ElasticSearch node unavailable, will retry in %s", backoffDelay)
-
-			case <-timeout:
-				cmd.Process.Kill() // too late; ignore errors for now
-				t.Fatalf("ES node didn't start in time (PID %d)", cmd.Process.Pid)
-			}
-		}
-	}()
-
-	return cmd.Process
-}
-
-func stopNode(t *testing.T, p *os.Process) {
-	if err := p.Kill(); err != nil {
-		t.Fatal(err)
-	}
-
-	_, err := p.Wait()
-	if err != nil {
-		t.Fatal(err)
-	}
-}
-
-func ensureNode(t *testing.T) {
-	_, err := os.Stat(SCRIPT)
-	if err == nil {
-		return
-	}
-
-	os.Setenv("PATH", "$PATH:/bin:/usr/bin:/usr/local/bin:/sbin:/usr/sbin:/usr/local/sbin")
-	wget, err := exec.LookPath("wget")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	tuple := fmt.Sprintf("elasticsearch-%s", ES_VERSION)
-	tarGz := fmt.Sprintf("%s.tar.gz", tuple)
-	if _, err := os.Stat(tarGz); err != nil {
-		url := fmt.Sprintf("https://github.com/downloads/elasticsearch/elasticsearch/%s", tarGz)
-		if err := exec.Command(wget, url).Run(); err != nil {
-			t.Fatal(err)
-		}
-	}
-
-	if err := exec.Command("tar", "zxvf", tarGz).Run(); err != nil {
-		t.Fatal(err)
-	}
-
-	if _, err := os.Stat(SCRIPT); err != nil {
-		t.Fatal(err)
 	}
 }
 
@@ -210,13 +128,5 @@ func loadData(t *testing.T) {
 		}
 
 		t.Logf("PUT %s: %s", path, respBuf)
-	}
-}
-
-func eraseData(t *testing.T) {
-	tuple := fmt.Sprintf("elasticsearch-%s", ES_VERSION)
-	dataDir := fmt.Sprintf("%s/data", tuple)
-	if err := exec.Command("rm", "-rfv", dataDir).Run(); err != nil {
-		t.Error(err)
 	}
 }

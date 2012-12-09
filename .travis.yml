@@ -1,2 +1,4 @@
 language: go
 
+services:
+  - elasticsearch
