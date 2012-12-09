@@ -108,14 +108,14 @@ func (n *Node) GetHealth() Health {
 
 // Search implements the Searcher interface for a Node. It fires the passed
 // SearchRequest against the represented ElasticSearch node.
-func (n *Node) Search(r Request) (SearchResponse, error) {
+func (n *Node) Search(r *SearchRequest) (SearchResponse, error) {
 	u, err := url.Parse(n.endpoint)
 	if err != nil {
 		return SearchResponse{}, err
 	}
-	u.Path = Path(r)
+	u.Path = r.Path()
 
-	queryBuf, err := json.Marshal(r.Query())
+	queryBuf, err := json.Marshal(r.Query)
 	if err != nil {
 		return SearchResponse{}, err
 	}

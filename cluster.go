@@ -69,7 +69,7 @@ func (c *Cluster) loop() {
 // Search implements the Searcher interface for a Cluster. It creates a
 // searchBundle, forwards it to the Cluster's event dispatcher, and blocks
 // for a response (or error).
-func (c *Cluster) Search(r Request) (SearchResponse, error) {
+func (c *Cluster) Search(r *SearchRequest) (SearchResponse, error) {
 	b := makeSearchBundle(r)
 	c.searchBundles <- b
 	select {
@@ -95,13 +95,13 @@ func (c *Cluster) Shutdown() {
 // searchBundle wraps a SearchRequest with response and error channels, so
 // that it can be processed by the Cluster's event dispatcher.
 type searchBundle struct {
-	request  Request
+	request  *SearchRequest
 	response chan SearchResponse
 	err      chan error
 }
 
 // makeSearchBundle produces a searchBundle from a SearchRequest.
-func makeSearchBundle(r Request) searchBundle {
+func makeSearchBundle(r *SearchRequest) searchBundle {
 	return searchBundle{
 		request:  r,
 		response: make(chan SearchResponse),
