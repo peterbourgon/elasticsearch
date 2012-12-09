@@ -2,3 +2,6 @@ language: go
 
 services:
   - elasticsearch
+
+script:
+  - go test -tags=cluster -v
