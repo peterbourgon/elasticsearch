@@ -190,11 +190,10 @@ func loadData(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		reqBuf := bytes.NewBuffer(reqBytes)
 
 		// refresh=true to make document(s) immediately searchable
 		url := "http://127.0.0.1:9200" + path + "?refresh=true"
-		req, err := http.NewRequest("PUT", url, reqBuf)
+		req, err := http.NewRequest("PUT", url, bytes.NewBuffer(reqBytes))
 		if err != nil {
 			t.Fatal(err)
 		}
