@@ -82,6 +82,7 @@ func testSimpleTermQuery(t *testing.T, c *es.Cluster) {
 type testClusterFunc func(*testing.T, *es.Cluster)
 
 func withCluster(t *testing.T, tests ...testClusterFunc) {
+	waitForCluster(t, 15*time.Second)
 	loadData(t)
 
 	endpoints := []string{"http://127.0.0.1:9200"}
@@ -91,6 +92,25 @@ func withCluster(t *testing.T, tests ...testClusterFunc) {
 
 	for _, f := range tests {
 		f(t, c)
+	}
+}
+
+func waitForCluster(t *testing.T, timeout time.Duration) {
+	giveUp := time.After(timeout)
+	delay := 100 * time.Millisecond
+	for {
+		resp, err := http.Get("http://127.0.0.1:9200/_stats")
+		if err == nil {
+			return // great
+		}
+
+		t.Logf("ElasticSearch not ready yet; waiting %s", delay)
+		select {
+		case <-time.After(delay):
+			delay *= 2
+		case <-giveUp:
+			t.Fatal("ElasticSearch didn't come up in time")
+		}
 	}
 }
 
