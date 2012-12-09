@@ -83,6 +83,7 @@ type testClusterFunc func(*testing.T, *es.Cluster)
 
 func withCluster(t *testing.T, tests ...testClusterFunc) {
 	waitForCluster(t, 15*time.Second)
+	deleteIndex(t)
 	loadData(t)
 
 	endpoints := []string{"http://127.0.0.1:9200"}
@@ -99,8 +100,9 @@ func waitForCluster(t *testing.T, timeout time.Duration) {
 	giveUp := time.After(timeout)
 	delay := 100 * time.Millisecond
 	for {
-		resp, err := http.Get("http://127.0.0.1:9200/_stats")
+		_, err := http.Get("http://127.0.0.1:9200")
 		if err == nil {
+			t.Logf("ElasticSearch now available")
 			return // great
 		}
 
@@ -111,6 +113,22 @@ func waitForCluster(t *testing.T, timeout time.Duration) {
 		case <-giveUp:
 			t.Fatal("ElasticSearch didn't come up in time")
 		}
+	}
+}
+
+func deleteIndex(t *testing.T) {
+	for _, index := range []string{"twitter"} {
+		req, err := http.NewRequest("DELETE", "http://127.0.0.1:9200/"+index, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		_, err = http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		t.Logf("DELETE index '%s' OK", index)
 	}
 }
 
