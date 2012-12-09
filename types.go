@@ -38,6 +38,17 @@ func (w *Wrapper) MarshalJSON() ([]byte, error) {
 //
 //
 
+func QueryWrapper(q SubQuery) SubQuery {
+	return &Wrapper{
+		Name:    "query",
+		Wrapped: q,
+	}
+}
+
+//
+//
+//
+
 // GenericQueryParams marshal to a valid query object for a large number of
 // query types. You generally use them applied to a particular field, ie. scope;
 // see FieldedGenericQuery.

@@ -3,7 +3,7 @@
 This is an opinionated library for ElasticSearch in Go. Its opinions are:
 
 * Builders are bad: construct queries declaratively, using nested structures
-* Don't be clever: when in doubt, be explicit and dumb
+* Cleverness is bad: when in doubt, be explicit and dumb
 
 [![Build Status][1]][2]
 
@@ -30,12 +30,14 @@ c := es.NewCluster(endpoints, pingInterval, pingTimeout)
 Construct queries declaratively, and fire them against the cluster.
 
 ```go
-q := es.TermQuery(es.TermQueryParams{
-	Query: &es.Wrapper{
-		Name:    "user",
-		Wrapped: "kimchy",
-	},
-})
+q := es.QueryWrapper(
+	es.TermQuery(es.TermQueryParams{
+		Query: &es.Wrapper{
+			Name:    "user",
+			Wrapped: "kimchy",
+		},
+	}),
+)
 
 request := es.NewSearchRequest("twitter", "tweets", q)
 response, err := c.Search(request)
