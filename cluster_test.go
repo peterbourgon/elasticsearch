@@ -1,4 +1,4 @@
-// +xxxbuild cluster
+// +build cluster
 
 // This file is only built and run if you specify
 // -tags=cluster as part of the 'go test' invocation.
@@ -94,7 +94,7 @@ func TestMultiSearch(t *testing.T) {
 		},
 	})
 	defer c.Shutdown()
-	defer deleteIndices(t, indices) // comment out to leave data after test
+	//defer deleteIndices(t, indices) // comment out to leave data after test
 
 	q1 := es.QueryWrapper(es.TermQuery(es.TermQueryParams{
 		Query: &es.Wrapper{
