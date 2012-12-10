@@ -32,3 +32,7 @@ type FacetResponse struct {
 		Count int64  `json:"count"`
 	} `json:"terms"`
 }
+
+type MultiSearchResponse struct {
+	Responses []SearchResponse `json:"responses"`
+}

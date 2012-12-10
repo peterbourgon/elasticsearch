@@ -43,7 +43,8 @@ func TestClusterShutdown(t *testing.T) {
 }
 
 func TestSimpleTermQuery(t *testing.T) {
-	c := newCluster(t, []string{"twitter"}, map[string]interface{}{
+	indices := []string{"twitter"}
+	c := newCluster(t, indices, map[string]interface{}{
 		"/twitter/tweet/1": map[string]string{
 			"user":      "kimchy",
 			"post_date": "2009-11-15T14:12:12",
@@ -51,6 +52,7 @@ func TestSimpleTermQuery(t *testing.T) {
 		},
 	})
 	defer c.Shutdown()
+	defer deleteIndices(t, indices) // comment out to leave data after test
 
 	q := es.QueryWrapper(es.TermQuery(es.TermQueryParams{
 		Query: &es.Wrapper{
@@ -59,7 +61,7 @@ func TestSimpleTermQuery(t *testing.T) {
 		},
 	}))
 
-	request := &es.SearchRequest{
+	request := es.SearchRequest{
 		Indices: []string{"twitter"},
 		Types:   []string{"tweet"},
 		Query:   q,
@@ -77,6 +79,99 @@ func TestSimpleTermQuery(t *testing.T) {
 	}
 
 	t.Logf("OK, %d hit(s), %dms", response.HitsWrapper.Total, response.Took)
+}
+
+func TestMultiSearch(t *testing.T) {
+	indices := []string{"index1", "index2"}
+	c := newCluster(t, indices, map[string]interface{}{
+		"/index1/foo/1": map[string]string{
+			"user":        "alice",
+			"description": "index=index1 type=foo id=1 user=alice",
+		},
+		"/index2/bar/2": map[string]string{
+			"user":        "bob",
+			"description": "index=index2 type=bar id=2 user=bob",
+		},
+	})
+	defer c.Shutdown()
+	defer deleteIndices(t, indices) // comment out to leave data after test
+
+	q1 := es.QueryWrapper(es.TermQuery(es.TermQueryParams{
+		Query: &es.Wrapper{
+			Name:    "user",
+			Wrapped: "alice",
+		},
+	}))
+	q2 := es.QueryWrapper(es.TermQuery(es.TermQueryParams{
+		Query: &es.Wrapper{
+			Name:    "user",
+			Wrapped: "bob",
+		},
+	}))
+	q3 := es.QueryWrapper(es.MatchAllQuery())
+
+	requests := []es.SearchRequest{
+		es.SearchRequest{
+			Indices: []string{"index1"},
+			Types:   []string{"foo"},
+			Query:   q1,
+		},
+		es.SearchRequest{
+			Indices: []string{"index2"},
+			Types:   []string{"bar"},
+			Query:   q2,
+		},
+		es.SearchRequest{
+			Indices: []string{}, // "index1", "index2" is not supported (!)
+			Types:   []string{}, // "type1", "type2" is not supported (!)
+			Query:   q3,
+		},
+	}
+
+	request := es.MultiSearchRequest(requests)
+	buf, _ := request.Body()
+	t.Logf("MultiSearch: %s", buf)
+
+	response, err := c.MultiSearch(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	buf, _ = json.Marshal(response)
+	t.Logf("MultiSearch gave response: %s", buf)
+
+	if expected, got := 3, len(response.Responses); expected != got {
+		t.Fatalf("expected %d response(s), got %d", expected, got)
+	}
+
+	r1 := response.Responses[0]
+	if r1.Error != "" {
+		t.Fatalf("response 1: %s", r1.Error)
+	}
+	if expected, got := 1, r1.HitsWrapper.Total; expected != got {
+		t.Fatalf("response 1: expected %d hit(s), got %d", expected, got)
+	}
+	buf, _ = json.Marshal(r1)
+	t.Logf("response 1 OK: %s", buf)
+
+	r2 := response.Responses[1]
+	if r2.Error != "" {
+		t.Fatalf("response 2: %s", r1.Error)
+	}
+	if expected, got := 1, r2.HitsWrapper.Total; expected != got {
+		t.Fatalf("response 2: expected %d hit(s), got %d", expected, got)
+	}
+	buf, _ = json.Marshal(r2)
+	t.Logf("response 2 OK: %s", buf)
+
+	r3 := response.Responses[2]
+	if r3.Error != "" {
+		t.Fatalf("response 3: %s", r1.Error)
+	}
+	if expected, got := 2, r3.HitsWrapper.Total; expected != got {
+		t.Fatalf("response 3: expected %d hit(s), got %d", expected, got)
+	}
+	buf, _ = json.Marshal(r3)
+	t.Logf("response 3 OK: %s", buf)
 }
 
 //

@@ -106,23 +106,24 @@ func (n *Node) GetHealth() Health {
 	return n.health
 }
 
-// Search implements the Searcher interface for a Node. It fires the passed
-// SearchRequest against the represented ElasticSearch node.
-func (n *Node) Search(r *SearchRequest) (SearchResponse, error) {
+// searchCommon performs a HTTP GET against the node+path, using the passed
+// body. It returns the raw bytes of the response, and leaves it to the caller
+// to marshal those bytes into the relevant response structure.
+func (n *Node) searchCommon(f Fireable) ([]byte, error) {
 	u, err := url.Parse(n.endpoint)
 	if err != nil {
-		return SearchResponse{}, err
+		return []byte{}, err
 	}
-	u.Path = r.Path()
+	u.Path = f.Path()
 
-	queryBuf, err := json.Marshal(r.Query)
+	body, err := f.Body()
 	if err != nil {
-		return SearchResponse{}, err
+		return []byte{}, err
 	}
 
-	req, err := http.NewRequest("GET", u.String(), bytes.NewBuffer(queryBuf))
+	req, err := http.NewRequest("GET", u.String(), bytes.NewBuffer(body))
 	if err != nil {
-		return SearchResponse{}, err
+		return []byte{}, err
 	}
 
 	// We don't implement an explicit timeout here. The idea is we're completely
@@ -131,11 +132,21 @@ func (n *Node) Search(r *SearchRequest) (SearchResponse, error) {
 	// above us.
 	resp, err := n.searchClient.Do(req)
 	if err != nil {
-		return SearchResponse{}, err
+		return []byte{}, err
 	}
 	defer resp.Body.Close()
 
 	responseBuf, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return []byte{}, err
+	}
+
+	return responseBuf, nil
+}
+
+// Search implements the Searcher interface for a Node.
+func (n *Node) Search(r SearchRequest) (SearchResponse, error) {
+	responseBuf, err := n.searchCommon(r)
 	if err != nil {
 		return SearchResponse{}, err
 	}
@@ -143,6 +154,21 @@ func (n *Node) Search(r *SearchRequest) (SearchResponse, error) {
 	var esResponse SearchResponse
 	if err = json.Unmarshal(responseBuf, &esResponse); err != nil {
 		return SearchResponse{}, err
+	}
+
+	return esResponse, nil
+}
+
+// MultiSearch implements the MultiSearcher interface for a Node.
+func (n *Node) MultiSearch(r MultiSearchRequest) (MultiSearchResponse, error) {
+	responseBuf, err := n.searchCommon(r)
+	if err != nil {
+		return MultiSearchResponse{}, err
+	}
+
+	var esResponse MultiSearchResponse
+	if err = json.Unmarshal(responseBuf, &esResponse); err != nil {
+		return MultiSearchResponse{}, err
 	}
 
 	return esResponse, nil
