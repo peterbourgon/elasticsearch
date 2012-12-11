@@ -71,11 +71,12 @@ func TestSimpleTermQuery(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+
 	if response.Error != "" {
 		t.Error(response.Error)
 	}
 	if expected, got := 1, response.HitsWrapper.Total; expected != got {
-		t.Errorf("expected %d, got %d", expected, got)
+		t.Fatalf("expected %d, got %d", expected, got)
 	}
 
 	t.Logf("OK, %d hit(s), %dms", response.HitsWrapper.Total, response.Took)
@@ -94,7 +95,7 @@ func TestMultiSearch(t *testing.T) {
 		},
 	})
 	defer c.Shutdown()
-	//defer deleteIndices(t, indices) // comment out to leave data after test
+	defer deleteIndices(t, indices) // comment out to leave data after test
 
 	q1 := es.QueryWrapper(es.TermQuery(es.TermQueryParams{
 		Query: &es.Wrapper{
@@ -129,15 +130,10 @@ func TestMultiSearch(t *testing.T) {
 	}
 
 	request := es.MultiSearchRequest(requests)
-	buf, _ := request.Body()
-	t.Logf("MultiSearch: %s", buf)
-
 	response, err := c.MultiSearch(request)
 	if err != nil {
 		t.Fatal(err)
 	}
-	buf, _ = json.Marshal(response)
-	t.Logf("MultiSearch gave response: %s", buf)
 
 	if expected, got := 3, len(response.Responses); expected != got {
 		t.Fatalf("expected %d response(s), got %d", expected, got)
@@ -150,7 +146,7 @@ func TestMultiSearch(t *testing.T) {
 	if expected, got := 1, r1.HitsWrapper.Total; expected != got {
 		t.Fatalf("response 1: expected %d hit(s), got %d", expected, got)
 	}
-	buf, _ = json.Marshal(r1)
+	buf, _ := json.Marshal(r1)
 	t.Logf("response 1 OK: %s", buf)
 
 	r2 := response.Responses[1]

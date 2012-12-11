@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net/url"
 	"strings"
 )
 
@@ -13,6 +14,7 @@ import (
 // Path(), with the given Body().
 type Fireable interface {
 	Path() string
+	Values() url.Values
 	Body() ([]byte, error)
 }
 
@@ -24,18 +26,27 @@ type SearchRequest struct {
 	Indices []string
 	Types   []string
 	Query   SubQuery
+	Params  url.Values
 }
 
 func (r SearchRequest) Path() string {
 	switch true {
 	case len(r.Indices) == 0 && len(r.Types) == 0:
-		return "/_search" // all indices, all types
+		return fmt.Sprintf(
+			"/_search", // all indices, all types
+		)
 
 	case len(r.Indices) > 0 && len(r.Types) == 0:
-		return fmt.Sprintf("/%s/_search", strings.Join(r.Indices, ","))
+		return fmt.Sprintf(
+			"/%s/_search",
+			strings.Join(r.Indices, ","),
+		)
 
 	case len(r.Indices) == 0 && len(r.Types) > 0:
-		return fmt.Sprintf("/_all/%s/_search", strings.Join(r.Types, ","))
+		return fmt.Sprintf(
+			"/_all/%s/_search",
+			strings.Join(r.Types, ","),
+		)
 
 	case len(r.Indices) > 0 && len(r.Types) > 0:
 		return fmt.Sprintf(
@@ -46,6 +57,8 @@ func (r SearchRequest) Path() string {
 	}
 	panic("unreachable")
 }
+
+func (r SearchRequest) Values() url.Values { return r.Params }
 
 func (r SearchRequest) Body() ([]byte, error) {
 	return json.Marshal(r.Query)
@@ -59,6 +72,10 @@ type MultiSearchRequest []SearchRequest
 
 func (r MultiSearchRequest) Path() string {
 	return "/_msearch"
+}
+
+func (r MultiSearchRequest) Values() url.Values {
+	return url.Values{} // TODO merge Values for all SearchRequests?
 }
 
 func (r MultiSearchRequest) Body() ([]byte, error) {

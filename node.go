@@ -115,6 +115,7 @@ func (n *Node) searchCommon(f Fireable) ([]byte, error) {
 		return []byte{}, err
 	}
 	u.Path = f.Path()
+	u.RawQuery = f.Values().Encode()
 
 	body, err := f.Body()
 	if err != nil {

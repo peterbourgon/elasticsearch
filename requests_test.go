@@ -2,6 +2,7 @@ package elasticsearch_test
 
 import (
 	es "github.com/peterbourgon/elasticsearch"
+	"net/url"
 	"strings"
 	"testing"
 )
@@ -62,6 +63,24 @@ func TestSearchRequestPath(t *testing.T) {
 		},
 	} {
 		if expected, got := tuple.expected, tuple.r.Path(); expected != got {
+			t.Errorf("%v: expected '%s', got '%s'", tuple.r, expected, got)
+		}
+	}
+}
+
+func TestSearchRequestValues(t *testing.T) {
+	for _, tuple := range []struct {
+		r        es.SearchRequest
+		expected string
+	}{
+		{
+			r: es.SearchRequest{
+				Params: url.Values{"preference": []string{"foo"}},
+			},
+			expected: "preference=foo",
+		},
+	} {
+		if expected, got := tuple.expected, tuple.r.Values().Encode(); expected != got {
 			t.Errorf("%v: expected '%s', got '%s'", tuple.r, expected, got)
 		}
 	}
