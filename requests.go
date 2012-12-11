@@ -26,7 +26,7 @@ type SearchRequest struct {
 	Indices []string
 	Types   []string
 	Query   SubQuery
-	Params  url.Values
+	Params  url.Values // can be nil unless explicitly set
 }
 
 func (r SearchRequest) Path() string {
@@ -58,7 +58,12 @@ func (r SearchRequest) Path() string {
 	panic("unreachable")
 }
 
-func (r SearchRequest) Values() url.Values { return r.Params }
+func (r SearchRequest) Values() url.Values {
+	if r.Params == nil {
+		return url.Values{}
+	}
+	return r.Params
+}
 
 func (r SearchRequest) Body() ([]byte, error) {
 	return json.Marshal(r.Query)
@@ -75,7 +80,15 @@ func (r MultiSearchRequest) Path() string {
 }
 
 func (r MultiSearchRequest) Values() url.Values {
-	return url.Values{} // TODO merge Values for all SearchRequests?
+	v := url.Values{}
+	for _, searchRequest := range r {
+		for key, values := range searchRequest.Values() {
+			for _, value := range values {
+				v.Add(key, value)
+			}
+		}
+	}
+	return v
 }
 
 func (r MultiSearchRequest) Body() ([]byte, error) {

@@ -142,3 +142,32 @@ func TestMultiSearchRequestBody(t *testing.T) {
 		t.Errorf("Body: expected:\n---\n%s\n---\ngot:\n---\n%s\n---\n", expected, got)
 	}
 }
+
+func TestSearchRequestUnspecifiedValues(t *testing.T) {
+	request := es.SearchRequest{}
+	v := request.Values()
+	a := v.Get("foo") // shouldn't crash
+
+	if expected, got := 0, len(a); expected != got {
+		t.Errorf("len(foo): expected %d, got %d", expected, got)
+	}
+}
+
+func TestMultiSearchRequestMergesValues(t *testing.T) {
+	requests := []es.SearchRequest{
+		es.SearchRequest{
+			Params: url.Values{"foo": []string{"a", "b"}},
+		},
+		es.SearchRequest{
+			Params: url.Values{"foo": []string{"b", "c"}},
+		},
+	}
+	request := es.MultiSearchRequest(requests)
+	v := request.Values()
+	a := v["foo"]
+	t.Logf("foo: %v", a)
+
+	if expected, got := 4, len(a); expected != got {
+		t.Errorf("len(foo): expected %d, got %d", expected, got)
+	}
+}

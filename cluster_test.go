@@ -205,6 +205,7 @@ func newCluster(t *testing.T, indices []string, m map[string]interface{}) *es.Cl
 
 func deleteIndices(t *testing.T, indices []string) {
 	for _, index := range indices {
+		// refresh=true to make document(s) immediately deleted
 		url := "http://127.0.0.1:9200/" + index + "?refresh=true"
 		req, err := http.NewRequest("DELETE", url, nil)
 		if err != nil {
