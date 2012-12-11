@@ -11,7 +11,7 @@ import (
 
 // Fireable defines anything which can be fired against the search cluster.
 // A Fireable will always be transformed into a HTTP GET against the given
-// Path(), with the given Body().
+// Path(), with the given Values() as parameters, and the given Body().
 type Fireable interface {
 	Path() string
 	Values() url.Values
