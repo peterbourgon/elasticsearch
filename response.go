@@ -8,11 +8,11 @@ type SearchResponse struct {
 	HitsWrapper struct {
 		Total int `json:"total"`
 		Hits  []struct {
-			Index string  `json:"_index"`
-			Type  string  `json:"_type"`
-			ID    string  `json:"_id"`
-			Score float64 `json:"_score"`
-		} `json:"hits"`
+			Index string   `json:"_index"`
+			Type  string   `json:"_type"`
+			ID    string   `json:"_id"`
+			Score *float64 `json:"_score"` // can be 'null' with constant_score
+		} `json:"hits,omitempty"`
 	} `json:"hits"`
 
 	Facets map[string]FacetResponse `json:"facets,omitempty"`

@@ -170,6 +170,65 @@ func TestMultiSearch(t *testing.T) {
 	t.Logf("response 3 OK: %s", buf)
 }
 
+func TestConstantScoreNoScore(t *testing.T) {
+	indices := []string{"twitter"}
+	c := newCluster(t, indices, map[string]interface{}{
+		"/twitter/tweet/1": map[string]string{
+			"user":      "kimchy",
+			"post_date": "2009-11-15T14:12:12",
+			"message":   "trying out Elastic Search",
+		},
+	})
+	defer c.Shutdown()
+	defer deleteIndices(t, indices) // comment out to leave data after test
+
+	q := map[string]interface{}{
+		"size": 20,
+		"sort": []string{"post_date"},
+		"filter": map[string]interface{}{
+			"and": []map[string]interface{}{
+				map[string]interface{}{
+					"type": map[string]string{"value": "tweet"},
+				},
+			},
+		},
+		"query": map[string]interface{}{
+			"constant_score": map[string]interface{}{
+				"filter": map[string]interface{}{
+					"term": map[string]string{"user": "kimchy"},
+				},
+			},
+		},
+	}
+
+	request := es.SearchRequest{
+		Indices: []string{"twitter"},
+		Types:   []string{"tweet"},
+		Query:   q,
+	}
+
+	response, err := c.Search(request)
+	if err != nil {
+		t.Fatalf("Search: %s", err)
+	}
+
+	buf, _ := json.Marshal(response)
+	t.Logf("got response: %s", buf)
+
+	if response.Error != "" {
+		t.Error(response.Error)
+	}
+	if expected, got := 1, response.HitsWrapper.Total; expected != got {
+		t.Fatalf("expected %d, got %d", expected, got)
+	}
+
+	if response.HitsWrapper.Hits[0].Score != nil {
+		t.Fatalf("score: expected nil, got something")
+	}
+
+	t.Logf("OK, %d hit(s), %dms", response.HitsWrapper.Total, response.Took)
+}
+
 //
 //
 //
