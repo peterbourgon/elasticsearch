@@ -35,9 +35,13 @@ type Node struct {
 // no explicit timeout set in the Transport dialer.
 func NewNode(endpoint string, pingTimeout time.Duration) *Node {
 	return &Node{
-		endpoint:     endpoint,
-		health:       Yellow,
-		searchClient: &http.Client{},
+		endpoint: endpoint,
+		health:   Yellow,
+		searchClient: &http.Client{
+			Transport: &http.Transport{
+				MaxIdleConnsPerHost: 250,
+			},
+		},
 		pingClient: &http.Client{
 			Transport: &http.Transport{
 				Dial: timeoutDialer(pingTimeout),
