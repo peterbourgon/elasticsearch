@@ -7,8 +7,8 @@ This is an opinionated library for ElasticSearch in Go. Its opinions are:
 
 [![Build Status][1]][2]
 
-[1]: https://secure.travis-ci.org/peterbourgon/elasticsearch.png
-[2]: http://www.travis-ci.org/peterbourgon/elasticsearch
+[1]: https://drone.io/github.com/peterbourgon/elasticsearch/status.png
+[2]: https://drone.io/github.com/peterbourgon/elasticsearch/latest
 
 
 # Usage
