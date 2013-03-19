@@ -62,9 +62,11 @@ func TestSimpleTermQuery(t *testing.T) {
 	}))
 
 	request := es.SearchRequest{
-		Indices: []string{"twitter"},
-		Types:   []string{"tweet"},
-		Query:   q,
+		es.SearchParams{
+			Indices: []string{"twitter"},
+			Types:   []string{"tweet"},
+		},
+		q,
 	}
 
 	response, err := c.Search(request)
@@ -111,25 +113,32 @@ func TestMultiSearch(t *testing.T) {
 	}))
 	q3 := es.QueryWrapper(es.MatchAllQuery())
 
-	requests := []es.SearchRequest{
-		es.SearchRequest{
-			Indices: []string{"index1"},
-			Types:   []string{"foo"},
-			Query:   q1,
-		},
-		es.SearchRequest{
-			Indices: []string{"index2"},
-			Types:   []string{"bar"},
-			Query:   q2,
-		},
-		es.SearchRequest{
-			Indices: []string{}, // "index1", "index2" is not supported (!)
-			Types:   []string{}, // "type1", "type2" is not supported (!)
-			Query:   q3,
+	request := es.MultiSearchRequest{
+		Requests: []es.SearchRequest{
+			es.SearchRequest{
+				es.SearchParams{
+					Indices: []string{"index1"},
+					Types:   []string{"foo"},
+				},
+				q1,
+			},
+			es.SearchRequest{
+				es.SearchParams{
+					Indices: []string{"index2"},
+					Types:   []string{"bar"},
+				},
+				q2,
+			},
+			es.SearchRequest{
+				es.SearchParams{
+					Indices: []string{}, // "index1", "index2" is not supported (!)
+					Types:   []string{}, // "type1", "type2" is not supported (!)
+				},
+				q3,
+			},
 		},
 	}
 
-	request := es.MultiSearchRequest(requests)
 	response, err := c.MultiSearch(request)
 	if err != nil {
 		t.Fatal(err)
@@ -202,9 +211,11 @@ func TestConstantScoreNoScore(t *testing.T) {
 	}
 
 	request := es.SearchRequest{
-		Indices: []string{"twitter"},
-		Types:   []string{"tweet"},
-		Query:   q,
+		es.SearchParams{
+			Indices: []string{"twitter"},
+			Types:   []string{"tweet"},
+		},
+		q,
 	}
 
 	response, err := c.Search(request)

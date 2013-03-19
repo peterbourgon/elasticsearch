@@ -1,10 +1,8 @@
 package elasticsearch
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"math/rand"
 	"net"
@@ -17,10 +15,10 @@ import (
 // A Node is a structure which represents a single ElasticSearch host.
 type Node struct {
 	sync.RWMutex
-	endpoint     string
-	health       Health
-	searchClient *http.Client // used for Search() only
-	pingClient   *http.Client // used for Ping() only
+	endpoint   string
+	health     Health
+	client     *http.Client // default http client
+	pingClient *http.Client // used for Ping() only
 }
 
 // NewNode constructs a Node handle. The endpoint should be of the form
@@ -31,13 +29,13 @@ type Node struct {
 // with a timeout as part of the Transport dialer. This custom pingClient is
 // used exclusively for Ping() calls.
 //
-// Regular queries are made with the default searchClient http.Client, which has
+// Regular queries are made with the default client http.Client, which has
 // no explicit timeout set in the Transport dialer.
 func NewNode(endpoint string, pingTimeout time.Duration) *Node {
 	return &Node{
 		endpoint: endpoint,
 		health:   Yellow,
-		searchClient: &http.Client{
+		client: &http.Client{
 			Transport: &http.Transport{
 				MaxIdleConnsPerHost: 250,
 			},
@@ -67,16 +65,11 @@ func (n *Node) Ping() bool {
 	}
 	defer resp.Body.Close()
 
-	buf, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Printf("ElasticSearch: ping %s: %s", u.Host, err)
-		return false
-	}
-
 	var status struct {
 		OK bool `json:"ok"`
 	}
-	if err = json.Unmarshal(buf, &status); err != nil {
+
+	if err = json.NewDecoder(resp.Body).Decode(&status); err != nil {
 		log.Printf("ElasticSearch: ping %s: %s", u.Host, err)
 		return false
 	}
@@ -110,73 +103,49 @@ func (n *Node) GetHealth() Health {
 	return n.health
 }
 
-// searchCommon performs a HTTP GET against the node+path, using the passed
-// body. It returns the raw bytes of the response, and leaves it to the caller
-// to marshal those bytes into the relevant response structure.
-func (n *Node) searchCommon(f Fireable) ([]byte, error) {
-	u, err := url.Parse(n.endpoint)
-	if err != nil {
-		return []byte{}, err
-	}
-	u.Path = f.Path()
-	u.RawQuery = f.Values().Encode()
-
-	body, err := f.Body()
-	if err != nil {
-		return []byte{}, err
-	}
-
-	req, err := http.NewRequest("GET", u.String(), bytes.NewBuffer(body))
-	if err != nil {
-		return []byte{}, err
-	}
-
-	// We don't implement an explicit timeout here. The idea is we're completely
-	// transparent: if ES has a timeout, we will report it back up the stack; if
-	// ES fails, ie. blocks us, we rely on the (assumed) timeouts in the stack
-	// above us.
-	resp, err := n.searchClient.Do(req)
-	if err != nil {
-		return []byte{}, err
-	}
-	defer resp.Body.Close()
-
-	responseBuf, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return []byte{}, err
-	}
-
-	return responseBuf, nil
-}
-
 // Search implements the Searcher interface for a Node.
 func (n *Node) Search(r SearchRequest) (SearchResponse, error) {
-	responseBuf, err := n.searchCommon(r)
-	if err != nil {
+	response := SearchResponse{}
+
+	if err := n.Execute(r, &response); err != nil {
 		return SearchResponse{}, err
 	}
 
-	var esResponse SearchResponse
-	if err = json.Unmarshal(responseBuf, &esResponse); err != nil {
-		return SearchResponse{}, err
-	}
-
-	return esResponse, nil
+	return response, nil
 }
 
 // MultiSearch implements the MultiSearcher interface for a Node.
 func (n *Node) MultiSearch(r MultiSearchRequest) (MultiSearchResponse, error) {
-	responseBuf, err := n.searchCommon(r)
+	response := MultiSearchResponse{}
+
+	if err := n.Execute(r, &response); err != nil {
+		return MultiSearchResponse{}, err
+	}
+
+	return response, nil
+}
+
+// Executes the Fireable f against the node and decodes the server's reply into
+// response.
+func (n *Node) Execute(f Fireable, response interface{}) error {
+	uri, err := url.Parse(n.endpoint)
 	if err != nil {
-		return MultiSearchResponse{}, err
+		return err
 	}
 
-	var esResponse MultiSearchResponse
-	if err = json.Unmarshal(responseBuf, &esResponse); err != nil {
-		return MultiSearchResponse{}, err
+	request, err := f.Request(uri)
+	if err != nil {
+		return err
 	}
 
-	return esResponse, nil
+	r, err := n.client.Do(request)
+	if err != nil {
+		return err
+	}
+
+	defer r.Body.Close()
+
+	return json.NewDecoder(r.Body).Decode(response)
 }
 
 //

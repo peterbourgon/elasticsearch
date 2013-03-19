@@ -40,8 +40,10 @@ q := es.QueryWrapper(
 )
 
 request := &es.SearchRequest{
-	Indices: []string{"twitter"},
-	Types:   []string{"tweet"},
+	Params: es.SearchParams{
+		Indices: []string{"twitter"},
+		Types:   []string{"tweet"},
+	},
 	Query:   q,
 }
 
