@@ -104,25 +104,40 @@ func (n *Node) GetHealth() Health {
 }
 
 // Search implements the Searcher interface for a Node.
-func (n *Node) Search(r SearchRequest) (SearchResponse, error) {
-	response := SearchResponse{}
-
-	if err := n.Execute(r, &response); err != nil {
-		return SearchResponse{}, err
-	}
-
-	return response, nil
+func (n *Node) Search(r SearchRequest) (response SearchResponse, err error) {
+	err = n.Execute(r, &response)
+	return
 }
 
 // MultiSearch implements the MultiSearcher interface for a Node.
-func (n *Node) MultiSearch(r MultiSearchRequest) (MultiSearchResponse, error) {
-	response := MultiSearchResponse{}
+func (n *Node) MultiSearch(r MultiSearchRequest) (response MultiSearchResponse, err error) {
+	err = n.Execute(r, &response)
+	return
+}
 
-	if err := n.Execute(r, &response); err != nil {
-		return MultiSearchResponse{}, err
-	}
+func (n *Node) Index(r IndexRequest) (response IndexResponse, err error) {
+	err = n.Execute(r, &response)
+	return
+}
 
-	return response, nil
+func (n *Node) Create(r CreateRequest) (response IndexResponse, err error) {
+	err = n.Execute(r, &response)
+	return
+}
+
+func (n *Node) Update(r UpdateRequest) (response IndexResponse, err error) {
+	err = n.Execute(r, &response)
+	return
+}
+
+func (n *Node) Delete(r DeleteRequest) (response IndexResponse, err error) {
+	err = n.Execute(r, &response)
+	return
+}
+
+func (n *Node) Bulk(r BulkRequest) (response BulkResponse, err error) {
+	err = n.Execute(r, &response)
+	return
 }
 
 // Executes the Fireable f against the node and decodes the server's reply into

@@ -55,26 +55,41 @@ func (c *Cluster) loop() {
 
 // Search implements the Searcher interface for a Cluster. It executes the
 // request against a suitable node.
-func (c *Cluster) Search(r SearchRequest) (SearchResponse, error) {
-	response := SearchResponse{}
-
-	if err := c.Execute(r, &response); err != nil {
-		return SearchResponse{}, err
-	}
-
-	return response, nil
+func (c *Cluster) Search(r SearchRequest) (response SearchResponse, err error) {
+	err = c.Execute(r, &response)
+	return
 }
 
 // MultiSearch implements the MultiSearcher interface for a Cluster. It
 // executes the search request against a suitable node.
-func (c *Cluster) MultiSearch(r MultiSearchRequest) (MultiSearchResponse, error) {
-	response := MultiSearchResponse{}
+func (c *Cluster) MultiSearch(r MultiSearchRequest) (response MultiSearchResponse, err error) {
+	err = c.Execute(r, &response)
+	return
+}
 
-	if err := c.Execute(r, &response); err != nil {
-		return MultiSearchResponse{}, err
-	}
+func (c *Cluster) Index(r IndexRequest) (response IndexResponse, err error) {
+	err = c.Execute(r, &response)
+	return
+}
 
-	return response, nil
+func (c *Cluster) Create(r CreateRequest) (response IndexResponse, err error) {
+	err = c.Execute(r, &response)
+	return
+}
+
+func (c *Cluster) Update(r UpdateRequest) (response IndexResponse, err error) {
+	err = c.Execute(r, &response)
+	return
+}
+
+func (c *Cluster) Delete(r DeleteRequest) (response IndexResponse, err error) {
+	err = c.Execute(r, &response)
+	return
+}
+
+func (c *Cluster) Bulk(r BulkRequest) (response BulkResponse, err error) {
+	err = c.Execute(r, &response)
+	return
 }
 
 // Executes the request against a suitable node and decodes server's reply into

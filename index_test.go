@@ -33,7 +33,7 @@ func TestIndexRequest(t *testing.T) {
 		t.Errorf("expected method = %q; got %q", expected, got)
 	}
 
-	if expected, got := "twitter/tweet/1", request.URL.Path; expected != got {
+	if expected, got := "/twitter/tweet/1", request.URL.Path; expected != got {
 		t.Errorf("expected path = %q; got %q", expected, got)
 	}
 
@@ -96,7 +96,7 @@ func TestCreateRequest(t *testing.T) {
 		t.Errorf("expected method = %q; got %q", expected, got)
 	}
 
-	if expected, got := "twitter/tweet/1/_create", request.URL.Path; expected != got {
+	if expected, got := "/twitter/tweet/1/_create", request.URL.Path; expected != got {
 		t.Errorf("expected path = %q; got %q", expected, got)
 	}
 
@@ -157,7 +157,7 @@ func TestUpdateRequest(t *testing.T) {
 		t.Errorf("expected method = %q; got %q", expected, got)
 	}
 
-	if expected, got := "twitter/tweet/1/_update", request.URL.Path; expected != got {
+	if expected, got := "/twitter/tweet/1/_update", request.URL.Path; expected != got {
 		t.Errorf("expected path = %q; got %q", expected, got)
 	}
 
@@ -203,7 +203,7 @@ func TestDeleteRequest(t *testing.T) {
 		t.Errorf("expected method = %q; got %q", expected, got)
 	}
 
-	if expected, got := "twitter/tweet/1", request.URL.Path; expected != got {
+	if expected, got := "/twitter/tweet/1", request.URL.Path; expected != got {
 		t.Errorf("expected path = %q; got %q", expected, got)
 	}
 
@@ -264,7 +264,7 @@ func TestBulkRequest(t *testing.T) {
 		t.Errorf("expected method = %q; got %q", expected, got)
 	}
 
-	if expected, got := "_bulk", request.URL.Path; expected != got {
+	if expected, got := "/_bulk", request.URL.Path; expected != got {
 		t.Errorf("expected path = %q; got %q", expected, got)
 	}
 

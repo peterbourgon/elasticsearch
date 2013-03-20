@@ -42,6 +42,178 @@ func TestClusterShutdown(t *testing.T) {
 	}
 }
 
+func TestClusterIndex(t *testing.T) {
+	c := newCluster(t, []string{"twitter"}, nil)
+	defer c.Shutdown()
+	defer deleteIndices(t, []string{"twitter"})
+
+	response, err := c.Index(es.IndexRequest{
+		es.IndexParams{
+			Index:   "twitter",
+			Type:    "tweet",
+			Id:      "1",
+			Refresh: "true",
+		},
+		map[string]interface{}{
+			"name": "John",
+		},
+	})
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if response.Error != "" {
+		t.Error(response.Error)
+	}
+
+	if expected, got := 1, response.Version; expected != got {
+		t.Errorf("expected version to be %d; got %d", expected, got)
+	}
+}
+
+func TestClusterCreate(t *testing.T) {
+	c := newCluster(t, []string{"twitter"}, nil)
+	defer c.Shutdown()
+	defer deleteIndices(t, []string{"twitter"})
+
+	response, err := c.Create(es.CreateRequest{
+		es.IndexParams{
+			Index:   "twitter",
+			Type:    "tweet",
+			Id:      "1",
+			Refresh: "true",
+		},
+		map[string]interface{}{
+			"name": "John",
+		},
+	})
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if response.Error != "" {
+		t.Error(response.Error)
+	}
+
+	if expected, got := 1, response.Version; expected != got {
+		t.Errorf("expected version to be %d; got %d", expected, got)
+	}
+}
+
+func TestClusterUpdate(t *testing.T) {
+	c := newCluster(t, []string{"twitter"}, map[string]interface{}{
+		"/twitter/tweet/1": map[string]string{
+			"name": "John",
+		},
+	})
+	defer c.Shutdown()
+	defer deleteIndices(t, []string{"twitter"})
+
+	response, err := c.Update(es.UpdateRequest{
+		es.IndexParams{
+			Index:   "twitter",
+			Type:    "tweet",
+			Id:      "1",
+			Refresh: "true",
+		},
+		map[string]interface{}{
+			"script": `ctx._source.text = "some text"`,
+		},
+	})
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if response.Error != "" {
+		t.Error(response.Error)
+	}
+
+	if expected, got := 2, response.Version; expected != got {
+		t.Errorf("expected version to be %d; got %d", expected, got)
+	}
+}
+
+func TestClusterDelete(t *testing.T) {
+	c := newCluster(t, []string{"twitter"}, map[string]interface{}{
+		"/twitter/tweet/1": map[string]string{
+			"name": "John",
+		},
+	})
+	defer c.Shutdown()
+	defer deleteIndices(t, []string{"twitter"})
+
+	response, err := c.Delete(es.DeleteRequest{
+		es.IndexParams{
+			Index:   "twitter",
+			Type:    "tweet",
+			Id:      "1",
+			Refresh: "true",
+		},
+	})
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if response.Error != "" {
+		t.Error(response.Error)
+	}
+
+	if expected, got := 2, response.Version; expected != got {
+		t.Errorf("expected version to be %d; got %d", expected, got)
+	}
+}
+
+func TestClusterBulk(t *testing.T) {
+	c := newCluster(t, []string{"twitter"}, map[string]interface{}{
+		"/twitter/tweet/1": map[string]string{
+			"name": "John",
+		},
+	})
+	defer c.Shutdown()
+	defer deleteIndices(t, []string{"twitter"})
+
+	response, err := c.Bulk(es.BulkRequest{
+		es.BulkParams{Refresh: "true"},
+		[]es.BulkIndexable{
+			es.IndexRequest{
+				es.IndexParams{Index: "twitter", Type: "tweet", Id: "1"},
+				map[string]interface{}{"name": "James"},
+			},
+			es.DeleteRequest{
+				es.IndexParams{Index: "twitter", Type: "tweet", Id: "2"},
+			},
+			es.CreateRequest{
+				es.IndexParams{Index: "twitter", Type: "tweet", Id: "3"},
+				map[string]interface{}{"name": "John"},
+			},
+		},
+	})
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(response.Items) != 3 {
+		t.Fatalf("expected 3 responses, got %d", len(response.Items))
+	}
+
+	if expected, got := 2, response.Items[0].Index.Version; expected != got {
+		t.Errorf("expected version of doc to be %d; got %d", expected, got)
+	}
+
+	if expected, got := false, response.Items[1].Delete.Found; expected != got {
+		t.Errorf("expected delete op to return found = false")
+	}
+
+	if expected, got := 1, response.Items[2].Create.Version; expected != got {
+		t.Errorf("expected version of doc to be %d; got %d", expected, got)
+	}
+}
+
 func TestSimpleTermQuery(t *testing.T) {
 	indices := []string{"twitter"}
 	c := newCluster(t, indices, map[string]interface{}{

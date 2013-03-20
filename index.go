@@ -11,7 +11,7 @@ import (
 type BulkResponse struct {
 	Took int `json:"took"` // ms
 
-	Items struct {
+	Items []struct {
 		Create IndexResponse `json:"create"`
 		Delete IndexResponse `json:"delete"`
 		Index  IndexResponse `json:"index"`
@@ -24,7 +24,7 @@ type IndexResponse struct {
 	Index   string `json:"_index"`
 	OK      bool   `json:"ok"`
 	Type    string `json:"_type"`
-	Version string `json:"_version"`
+	Version int    `json:"_version"`
 
 	Error    string `json:"error,omitempty"`
 	Status   int    `json:"status,omitempty"`
@@ -79,7 +79,7 @@ func (r IndexRequest) EncodeSource(enc *json.Encoder) error {
 }
 
 func (r IndexRequest) Request(uri *url.URL) (*http.Request, error) {
-	uri.Path = path.Join(r.Params.Index, r.Params.Type, r.Params.Id)
+	uri.Path = path.Join("/", r.Params.Index, r.Params.Type, r.Params.Id)
 	uri.RawQuery = r.Params.Values().Encode()
 
 	buf := new(bytes.Buffer)
@@ -108,7 +108,7 @@ func (r CreateRequest) EncodeSource(enc *json.Encoder) error {
 }
 
 func (r CreateRequest) Request(uri *url.URL) (*http.Request, error) {
-	uri.Path = path.Join(r.Params.Index, r.Params.Type, r.Params.Id, "_create")
+	uri.Path = path.Join("/", r.Params.Index, r.Params.Type, r.Params.Id, "_create")
 	uri.RawQuery = r.Params.Values().Encode()
 
 	buf := new(bytes.Buffer)
@@ -136,7 +136,7 @@ func (r DeleteRequest) EncodeSource(enc *json.Encoder) error {
 }
 
 func (r DeleteRequest) Request(uri *url.URL) (*http.Request, error) {
-	uri.Path = path.Join(r.Params.Index, r.Params.Type, r.Params.Id)
+	uri.Path = path.Join("/", r.Params.Index, r.Params.Type, r.Params.Id)
 	uri.RawQuery = r.Params.Values().Encode()
 
 	return http.NewRequest("DELETE", uri.String(), nil)
@@ -148,7 +148,7 @@ type UpdateRequest struct {
 }
 
 func (r UpdateRequest) Request(uri *url.URL) (*http.Request, error) {
-	uri.Path = path.Join(r.Params.Index, r.Params.Type, r.Params.Id, "_update")
+	uri.Path = path.Join("/", r.Params.Index, r.Params.Type, r.Params.Id, "_update")
 	uri.RawQuery = r.Params.Values().Encode()
 
 	buf := new(bytes.Buffer)
@@ -189,7 +189,7 @@ type BulkRequest struct {
 }
 
 func (r BulkRequest) Request(uri *url.URL) (*http.Request, error) {
-	uri.Path = "_bulk"
+	uri.Path = "/_bulk"
 	uri.RawQuery = r.Params.Values().Encode()
 
 	buf := new(bytes.Buffer)
