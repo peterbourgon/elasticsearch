@@ -4,121 +4,144 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"log"
+	"net/http"
 	"net/url"
 	"strings"
 )
 
+// Helper function which turns a map of strings into url.Values, omitting empty
+// values.
+func values(v map[string]string) url.Values {
+	values := url.Values{}
+
+	for key, value := range v {
+		if value != "" {
+			values.Set(key, value)
+		}
+	}
+
+	return values
+}
+
 // Fireable defines anything which can be fired against the search cluster.
-// A Fireable will always be transformed into a HTTP GET against the given
-// Path(), with the given Values() as parameters, and the given Body().
 type Fireable interface {
-	Path() string
-	Values() url.Values
-	Body() ([]byte, error)
+	Request(uri *url.URL) (*http.Request, error)
 }
 
 //
 //
 //
 
+type SearchParams struct {
+	Indices []string `json:"index,omitempty"`
+	Types   []string `json:"type,omitempty"`
+
+	Routing    string `json:"routing,omitempty"`
+	Preference string `json:"preference,omitempty"`
+	SearchType string `json:"search_type,omitempty"`
+}
+
+func (p SearchParams) Values() url.Values {
+	return values(map[string]string{
+		"routing":     p.Routing,
+		"preference":  p.Preference,
+		"search_type": p.SearchType,
+	})
+}
+
 type SearchRequest struct {
-	Indices []string
-	Types   []string
-	Query   SubQuery
-	Params  url.Values // can be nil unless explicitly set
+	Params SearchParams
+	Query  SubQuery
+}
+
+func (r SearchRequest) EncodeMultiHeader(enc *json.Encoder) error {
+	return enc.Encode(r.Params)
+}
+
+func (r SearchRequest) EncodeQuery(enc *json.Encoder) error {
+	return enc.Encode(r.Query)
+}
+
+func (r SearchRequest) Request(uri *url.URL) (*http.Request, error) {
+	uri.Path = r.Path()
+	uri.RawQuery = r.Params.Values().Encode()
+
+	buf := new(bytes.Buffer)
+	enc := json.NewEncoder(buf)
+
+	if err := r.EncodeQuery(enc); err != nil {
+		return nil, err
+	}
+
+	return http.NewRequest("GET", uri.String(), buf)
 }
 
 func (r SearchRequest) Path() string {
 	switch true {
-	case len(r.Indices) == 0 && len(r.Types) == 0:
+	case len(r.Params.Indices) == 0 && len(r.Params.Types) == 0:
 		return fmt.Sprintf(
 			"/_search", // all indices, all types
 		)
 
-	case len(r.Indices) > 0 && len(r.Types) == 0:
+	case len(r.Params.Indices) > 0 && len(r.Params.Types) == 0:
 		return fmt.Sprintf(
 			"/%s/_search",
-			strings.Join(r.Indices, ","),
+			strings.Join(r.Params.Indices, ","),
 		)
 
-	case len(r.Indices) == 0 && len(r.Types) > 0:
+	case len(r.Params.Indices) == 0 && len(r.Params.Types) > 0:
 		return fmt.Sprintf(
 			"/_all/%s/_search",
-			strings.Join(r.Types, ","),
+			strings.Join(r.Params.Types, ","),
 		)
 
-	case len(r.Indices) > 0 && len(r.Types) > 0:
+	case len(r.Params.Indices) > 0 && len(r.Params.Types) > 0:
 		return fmt.Sprintf(
 			"/%s/%s/_search",
-			strings.Join(r.Indices, ","),
-			strings.Join(r.Types, ","),
+			strings.Join(r.Params.Indices, ","),
+			strings.Join(r.Params.Types, ","),
 		)
 	}
 	panic("unreachable")
 }
 
-func (r SearchRequest) Values() url.Values {
-	if r.Params == nil {
-		return url.Values{}
-	}
-	return r.Params
-}
-
-func (r SearchRequest) Body() ([]byte, error) {
-	return json.Marshal(r.Query)
-}
-
 //
 //
 //
 
-type MultiSearchRequest []SearchRequest
+type MultiSearchParams struct {
+	Indices []string
+	Types   []string
 
-func (r MultiSearchRequest) Path() string {
-	return "/_msearch"
+	SearchType string
 }
 
-func (r MultiSearchRequest) Values() url.Values {
-	v := url.Values{}
-	for _, searchRequest := range r {
-		for key, values := range searchRequest.Values() {
-			for _, value := range values {
-				v.Add(key, value)
-			}
-		}
-	}
-	return v
+func (p MultiSearchParams) Values() url.Values {
+	return values(map[string]string{
+		"search_type": p.SearchType,
+	})
 }
 
-func (r MultiSearchRequest) Body() ([]byte, error) {
-	type headerLine struct {
-		Indices []string `json:"index,omitempty"`
-		Types   []string `json:"type,omitempty"`
+type MultiSearchRequest struct {
+	Params   MultiSearchParams
+	Requests []SearchRequest
+}
+
+func (r MultiSearchRequest) Request(uri *url.URL) (*http.Request, error) {
+	uri.Path = "/_msearch"
+	uri.RawQuery = r.Params.Values().Encode()
+
+	buf := new(bytes.Buffer)
+	enc := json.NewEncoder(buf)
+
+	for _, req := range r.Requests {
+		if err := req.EncodeMultiHeader(enc); err != nil {
+			return nil, err
+		}
+		if err := req.EncodeQuery(enc); err != nil {
+			return nil, err
+		}
 	}
 
-	lines := [][]byte{}
-	for _, searchRequest := range r {
-		headerBuf, err := json.Marshal(headerLine{
-			Indices: searchRequest.Indices,
-			Types:   searchRequest.Types,
-		})
-		if err != nil {
-			log.Printf("ElasticSearch: MultiSearchRequest Body header: %s", err)
-			continue
-		}
-
-		bodyBuf, err := searchRequest.Body()
-		if err != nil {
-			log.Printf("ElasticSearch: MultiSearchRequest Body body: %s", err)
-			continue
-		}
-
-		lines = append(lines, headerBuf)
-		lines = append(lines, bodyBuf)
-	}
-
-	// need trailing '\n'
-	// http://www.elasticsearch.org/guide/reference/api/multi-search.html
-	return append(bytes.Join(lines, []byte{'\n'}), '\n'), nil
+	return http.NewRequest("GET", uri.String(), buf)
 }
