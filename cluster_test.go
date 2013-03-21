@@ -201,15 +201,15 @@ func TestClusterBulk(t *testing.T) {
 		t.Fatalf("expected 3 responses, got %d", len(response.Items))
 	}
 
-	if expected, got := 2, response.Items[0].Index.Version; expected != got {
+	if expected, got := 2, response.Items[0].Version; expected != got {
 		t.Errorf("expected version of doc to be %d; got %d", expected, got)
 	}
 
-	if expected, got := false, response.Items[1].Delete.Found; expected != got {
+	if expected, got := false, response.Items[1].Found; expected != got {
 		t.Errorf("expected delete op to return found = false")
 	}
 
-	if expected, got := 1, response.Items[2].Create.Version; expected != got {
+	if expected, got := 1, response.Items[2].Version; expected != got {
 		t.Errorf("expected version of doc to be %d; got %d", expected, got)
 	}
 }
