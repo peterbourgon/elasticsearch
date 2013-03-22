@@ -3,6 +3,7 @@ package elasticsearch
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/url"
 	"path"
@@ -11,11 +12,43 @@ import (
 type BulkResponse struct {
 	Took int `json:"took"` // ms
 
-	Items []struct {
-		Create IndexResponse `json:"create"`
-		Delete IndexResponse `json:"delete"`
-		Index  IndexResponse `json:"index"`
-	} `json:"items"`
+	Items []BulkItemResponse `json:"items"`
+}
+
+type BulkItemResponse IndexResponse
+
+// Bulk responses are wrapped in an extra object whose only key is the
+// operation performed (create, delete, or index). BulkItemResponse response is
+// an alias for IndexResponse, but deals with this extra indirection.
+func (r *BulkItemResponse) UnmarshalJSON(data []byte) error {
+	var wrapper struct {
+		Create json.RawMessage `json:"create"`
+		Delete json.RawMessage `json:"delete"`
+		Index  json.RawMessage `json:"index"`
+	}
+
+	if err := json.Unmarshal(data, &wrapper); err != nil {
+		return err
+	}
+
+	var inner json.RawMessage
+
+	switch {
+	case wrapper.Create != nil:
+		inner = wrapper.Create
+	case wrapper.Index != nil:
+		inner = wrapper.Index
+	case wrapper.Delete != nil:
+		inner = wrapper.Delete
+	default:
+		return fmt.Errorf("expected bulk response to be create, index, or delete")
+	}
+
+	if err := json.Unmarshal(inner, (*IndexResponse)(r)); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 type IndexResponse struct {
