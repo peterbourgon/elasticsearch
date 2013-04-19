@@ -36,6 +36,7 @@ type SearchParams struct {
 	Indices []string `json:"index,omitempty"`
 	Types   []string `json:"type,omitempty"`
 
+	Timeout    string `json:"-,omitempty"`
 	Routing    string `json:"routing,omitempty"`
 	Preference string `json:"preference,omitempty"`
 	SearchType string `json:"search_type,omitempty"`
@@ -43,6 +44,7 @@ type SearchParams struct {
 
 func (p SearchParams) Values() url.Values {
 	return values(map[string]string{
+		"timeout":     p.Timeout,
 		"routing":     p.Routing,
 		"preference":  p.Preference,
 		"search_type": p.SearchType,
