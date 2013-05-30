@@ -60,6 +60,7 @@ type GenericQueryParams struct {
 	Boost              float32 `json:"boost,omitempty"`
 	Operator           string  `json:"operator,omitempty"`
 	MinimumShouldMatch string  `json:"minimum_should_match,omitempty"`
+	CutoffFrequency    float32 `json:"cutoff_frequency,omitempty"`
 }
 
 // FieldedGenericQuery returns a SubQuery representing the passed QueryParams
