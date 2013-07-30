@@ -305,17 +305,20 @@ func TermFilter(p TermFilterParams) FilterSubQuery {
 }
 
 type TermsFilterParams struct {
-	Field  string
-	Values []string
+	Field     string
+	Values    []string
+	Execution string
 }
 
 func TermsFilter(p TermsFilterParams) FilterSubQuery {
-	return &Wrapper{
-		Name: "terms",
-		Wrapped: &Wrapper{
-			Name:    p.Field,
-			Wrapped: p.Values,
-		},
+	terms := map[string]interface{}{
+		p.Field: p.Values,
+	}
+	if p.Execution != "" {
+		terms["execution"] = p.Execution
+	}
+	return map[string]interface{}{
+		"terms": terms,
 	}
 }
 
